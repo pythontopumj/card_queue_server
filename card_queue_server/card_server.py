@@ -4,7 +4,7 @@ import json
 import redis
 
 # Redis 설정
-redis_host = 'localhost'
+redis_host = 'redis'
 redis_port = 6379
 r = redis.Redis(host=redis_host, port=redis_port)
 
