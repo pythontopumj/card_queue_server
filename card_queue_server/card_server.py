@@ -208,8 +208,16 @@ def start_server():
 
     # Redis 구독을 위한 스레드 시작
     def redis_subscriber():
+        r = redis.Redis(host='localhost', port=6379)
+        pubsub = r.pubsub()
+        pubsub.subscribe('status_updates')
+
         for message in pubsub.listen():
-                handle_message(message['data'])
+            if message['type'] == 'message':
+                # 메시지 형식을 확인합니다
+                if isinstance(message['data'], bytes):
+                    message_str = message['data'].decode('utf-8')
+                    handle_message(message_str)
 
     redis_thread = threading.Thread(target=redis_subscriber)
     redis_thread.daemon = True
