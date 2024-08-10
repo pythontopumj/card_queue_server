@@ -9,7 +9,7 @@ redis_port = 6379
 r = redis.Redis(host=redis_host, port=redis_port)
 
 # 초기 상태 설정
-initial_deck = ["s1", "s2", "s3", "s4",'s5','s6','d7','s8','s9','s10','JK']
+initial_deck = ["s1", "s2", "s3", "s4", 's5', 's6', 'd7', 's8', 's9', 's10', 'JK']
 r.set('card_deck', json.dumps(initial_deck))
 r.set('nicknames', json.dumps({}))
 r.set('queue', json.dumps([]))
