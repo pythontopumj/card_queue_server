@@ -103,10 +103,9 @@ def handle_client_request(request):
         if len(nicknames) >= 21:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
-        nicknames[nickname] = {'status': 'waiting'}
+        nicknames[nickname] = {'status': 'connected'}
         set_nicknames(nicknames)
 
-        notify_clients()
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
 
     elif action == 'claim_queue':
@@ -115,13 +114,12 @@ def handle_client_request(request):
         if not get_deck():
             return json.dumps({'status': 'error', 'message': '카드 이미 다 가져간'})
 
-        requesting_card=str(get_deck()[0])
-        remove_card(get_deck()[0], nickname)
-        queue = get_queue()
+        selected_card=str(get_deck()[0])
+        remove_card(selected_card,nickname)
         queue.append(nickname)
         set_queue(queue)
-        notify_clients()
-        return json.dumps({'status': 'success','queue_card': f'{requesting_card}'})
+        nicknames[nickname] = {'status': 'in_a_queue'}
+        return json.dumps({'status': 'success','queue_card': f'{selected_card}'})
 
     elif action == 'return':
         if nickname not in nicknames:
@@ -133,7 +131,7 @@ def handle_client_request(request):
         queue = get_queue()
         queue.remove(nickname)
         set_queue(queue)
-        notify_clients()
+        nicknames[nickname] = {'status': 'connected'}
         return json.dumps({'status': 'success', 'message': f'{card_id} 반납 '})
 
     return json.dumps({'status': 'error', 'message': 'Invalid action'})
