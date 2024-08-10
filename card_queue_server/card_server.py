@@ -107,11 +107,11 @@ def handle_client_request(request):
     elif action == 'remove':
         if nickname not in nicknames:
             return json.dumps({'status': 'error', 'message': 'Nickname not found'})
-        if card_id not in get_deck():
+        if not get_deck():
             return json.dumps({'status': 'error', 'message': 'Card not available'})
-
-        remove_card(card_id, nickname)
-        return json.dumps({'status': 'success', 'message': f'Card {card_id} removed and {nickname} removed from queue'})
+        requesting_card=str(get_deck()[0])
+        remove_card(get_deck()[0], nickname)
+        return json.dumps({'status': 'success', 'message': f'Card {requesting_card} removed and {nickname} removed from queue'})
 
     elif action == 'return':
         if nickname not in nicknames:
