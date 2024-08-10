@@ -212,7 +212,7 @@ def start_server():
 
     # Redis 구독을 위한 스레드 시작
     def redis_subscriber():
-        r = redis.Redis(host='localhost', port=6379)
+        r = redis.Redis(host='redis_server', port=6379)
         pubsub = r.pubsub()
         pubsub.subscribe('status_updates')
 
