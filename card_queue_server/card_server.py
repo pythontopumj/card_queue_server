@@ -10,7 +10,7 @@ r = redis.Redis(host=redis_host, port=redis_port)
 
 initial_deck = ["s1", "s2", "s3", "s4", 's5', 's6', 'd7', 's8', 's9', 's10', 'JK']
 r.set('card_deck', json.dumps(initial_deck))#카드를 뽑고 반납하는 카드덱
-r.set('nicknames', json.dumps({}))#nickname:{ip:port}
+r.set('nicknames', json.dumps({}))#nickname:{adress:socket}
 r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
 r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': None}))#가장 최신 정보
@@ -32,6 +32,10 @@ def broadcast_message(message):
 
 def handle_message(message):
     """Redis 메시지를 처리하고 클라이언트에게 전달합니다."""
+    if isinstance(message, int):
+        # 메시지가 정수인 경우는 처리하지 않거나 로그를 남길 수 있음
+        print(f"Received integer message: {message}")
+        return
     message_str = message.decode('utf-8')
     print(f"Broadcasting message: {message_str}")
     broadcast_message(message_str)
@@ -95,7 +99,7 @@ def return_card(card_id, nickname):
         set_latest_update('return', card_id, nickname)
         notify_clients()
 
-def handle_client_request(request,client_adress,client_socket):
+def handle_client_request(request,client_adress):
     data = json.loads(request)
     action = data.get('action')
     card_id = data.get('card_id')
@@ -118,7 +122,7 @@ def handle_client_request(request,client_adress,client_socket):
         if len(registered_list) >= 21:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
-        registered_list[nickname] = {client_adress:client_socket}
+        registered_list[nickname] = str(client_adress)
         set_nicknames(registered_list)
 
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
@@ -168,7 +172,7 @@ def handle_client_connection(client_socket, client_address):
             request = client_socket.recv(1024).decode('utf-8')
             if not request:
                 break  # 연결이 끊어졌다면 종료
-            response = handle_client_request(request)
+            response = handle_client_request(request, client_address)
             client_socket.send(response.encode('utf-8'))
 
     except Exception as e:
@@ -176,16 +180,16 @@ def handle_client_connection(client_socket, client_address):
 
     finally:
         # 클라이언트 연결 종료 시 카드 반납 및 상태 초기화
-        def find_gone_user(dict, target_value):
-            return [key for key, value in dict.items() if value == target_value]
+        def find_gone_user(dict_, target_value):
+            return [key for key, value in dict_.items() if value == target_value]
         client_socket.close()
         clients.remove(client_socket)
         # 클라이언트가 연결 종료 시 카드 자동 반납
         registered_list = get_nicknames()
         jangbu=get_jangbu()
         queue = get_queue()
-        if {client_address:client_socket} in registered_list.values():
-            discon_user_list=find_gone_user(registered_list,{client_address:client_socket})
+        if str(client_address) in registered_list.values():
+            discon_user_list=find_gone_user(registered_list,str(client_address))
             for discon_user in discon_user_list:
                 nickname = discon_user
                 registered_list.pop(nickname, None)
