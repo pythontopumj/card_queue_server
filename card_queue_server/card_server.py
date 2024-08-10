@@ -3,8 +3,8 @@ import threading
 import json
 import redis
 
-# Redis 설정
-redis_host = 'redis'
+# Redis 설정 9786포트로 클라이언트와 통신
+redis_host = 'redis_server'
 redis_port = 6379
 r = redis.Redis(host=redis_host, port=redis_port)
 
