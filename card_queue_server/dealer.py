@@ -132,7 +132,7 @@ class MainWindow(QMainWindow):
 
     def queue_card(self, card_id, nickname):
         """카드를 서버에서 제거합니다."""
-        request = json.dumps({'action': 'claim_queue', 'card_id': card_id, 'nickname': nickname})
+        request = json.dumps({'action': 'claim_queue', 'nickname': nickname})
         response = self.send_request(request)
         self.debug_message_label.setText(f"Remove card response: {response}")
         return response

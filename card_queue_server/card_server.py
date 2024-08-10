@@ -87,29 +87,29 @@ def handle_client_request(request):
     action = data.get('action')
     card_id = data.get('card_id')
     nickname = data.get('nickname')
-    nicknames = get_nicknames()
+    registered_list = get_nicknames()
     queue = get_queue()
 
     if action == 'see_all':
         see_through_all = {
-            'all_register_list': nicknames,
+            'all_register_list': registered_list,
             'all_queue_list': queue
         }
         return json.dumps(see_through_all)
 
     if action == 'register':
-        if nickname in nicknames:
+        if nickname in registered_list:
             return json.dumps({'status': 'error', 'message': '이미 뺏긴 이름'})
-        if len(nicknames) >= 21:
+        if len(registered_list) >= 21:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
-        nicknames[nickname] = {'status': 'connected'}
-        set_nicknames(nicknames)
+        registered_list[nickname] = {'status': 'connected'}
+        set_nicknames(registered_list)
 
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
 
     elif action == 'claim_queue':
-        if nickname not in nicknames:
+        if nickname not in registered_list:
             return json.dumps({'status': 'error', 'message': '유효하지 않은 접근'})
         if not get_deck():
             return json.dumps({'status': 'error', 'message': '카드 이미 다 가져간'})
@@ -118,11 +118,11 @@ def handle_client_request(request):
         remove_card(selected_card,nickname)
         queue.append(nickname)
         set_queue(queue)
-        nicknames[nickname] = {'status': 'in_a_queue'}
+        registered_list[nickname] = {'status': 'in_a_queue'}
         return json.dumps({'status': 'success','queue_card': f'{selected_card}'})
 
     elif action == 'return':
-        if nickname not in nicknames:
+        if nickname not in registered_list:
             return json.dumps({'status': 'error', 'message': '유효하지 않은 접근'})
         if card_id in get_deck():
             return json.dumps({'status': 'error', 'message': '재접속 필요'})
@@ -131,7 +131,7 @@ def handle_client_request(request):
         queue = get_queue()
         queue.remove(nickname)
         set_queue(queue)
-        nicknames[nickname] = {'status': 'connected'}
+        registered_list[nickname] = {'status': 'connected'}
         return json.dumps({'status': 'success', 'message': f'{card_id} 반납 '})
 
     return json.dumps({'status': 'error', 'message': 'Invalid action'})
@@ -157,15 +157,15 @@ def handle_client_connection(client_socket, client_address):
         # 클라이언트 연결 종료 시 카드 반납 및 상태 초기화
         client_socket.close()
         # 클라이언트가 연결 종료 시 카드 자동 반납
-        nicknames = get_nicknames()
-        if client_address in nicknames:
+        registered_list = get_nicknames()
+        if client_address in registered_list:
             nickname = client_address
             # 카드 반납 처리
             for card_id in list(get_deck()):
                 return_card(card_id, nickname)
             # 닉네임 및 큐 상태 초기화
-            nicknames.pop(nickname, None)
-            set_nicknames(nicknames)
+            registered_list.pop(nickname, None)
+            set_nicknames(registered_list)
             queue = get_queue()
             if nickname in queue:
                 queue.remove(nickname)
