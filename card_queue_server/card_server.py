@@ -63,11 +63,11 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
         with self.islock:
             return self.subs_store.copy()
 
-    def remove_instance_by_socket(cls, socket):
+    def remove_instance_by_socket(cls, client_socket):
         """특정 소켓을 통해 생성된 인스턴스를 찾아 제거합니다."""
         with cls.cs_lock:
             for instance in cls.socket_instances:
-                if instance.socket == socket:
+                if instance.socket == client_socket:
                     # 소켓 종료
                     try:
                         instance.socket.close()
@@ -293,7 +293,7 @@ def start_server():
     def around_the_user_for_sub():# 구독정보를 처리하기 위한 쓰레드
         while True:
             time.sleep(1)
-            list_for_user=subs_storage.get_socket_list
+            list_for_user=subs_storage.get_socket_list()
             for user in list_for_user:
                 socket_for_broad=user.who_i_am()
                 sub_list=user.get_instance_storage()
