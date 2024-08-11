@@ -7,12 +7,12 @@ import logging
 
 # 로깅 설정
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # 로그 레벨을 DEBUG로 설정
+logger = logging.getLogger('test_logger')
+logger.setLevel(logging.DEBUG)
 
 # 파일 핸들러 설정
-file_handler = logging.FileHandler('card_sv.log')
-file_handler.setLevel(logging.DEBUG)  # 파일 핸들러에 대한 로그 레벨 설정
+file_handler = logging.FileHandler('test_log.log')
+file_handler.setLevel(logging.DEBUG)
 
 # 포맷터 설정
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
