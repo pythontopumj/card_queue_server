@@ -187,7 +187,7 @@ def handle_client_request(request,client_adress,client_socket):
 
         registered_list[nickname] = str(client_adress)
         set_nicknames(registered_list)
-        subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
+        making_class=subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
 
     elif action == 'claim_queue':
@@ -233,7 +233,7 @@ def handle_client_connection(client_socket, client_address):
 
         # 클라이언트 요청 수신 및 처리
         while True:
-            request = client_socket.recv(1024).decode('utf-8')
+            request = client_socket.recv(4098).decode('utf-8')
             if not request:
                 print("Client disconnected or sent an empty request.")
                 break  # 연결이 끊어졌다면 종료
@@ -275,6 +275,7 @@ def handle_client_connection(client_socket, client_address):
 
 def start_server():
     """서버를 시작합니다."""
+    print("before start")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(('0.0.0.0', 9999))
     server.listen(20)
