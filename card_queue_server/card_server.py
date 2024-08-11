@@ -27,7 +27,7 @@ r = redis.Redis(host=redis_host, port=redis_port)
 
 initial_deck = ["s1", "s2", "s3", "s4", 's5', 's6', 'd7', 's8', 's9', 's10', 'JK']
 r.set('card_deck', json.dumps(initial_deck))#카드를 뽑고 반납하는 카드덱
-r.set('nicknames', json.dumps({}))#nickname:str(adress)
+r.set('nicknames', json.dumps({{'admin':None}}))#nickname:str(adress)
 r.set('address_w_name', json.dumps({}))#address:name
 r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
@@ -207,7 +207,7 @@ def handle_client_request(request,client_socket,client_address):
     if action == 'register':
         if nickname in registered_list:
             return json.dumps({'status': 'error', 'message': '이미 뺏긴 이름'})
-        if len(registered_list) >= 21:
+        if len(registered_list) >= 23:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
         registered_list[nickname] = str(client_address)
@@ -307,7 +307,7 @@ def start_server():
     print("before start")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(('0.0.0.0', 9999))
-    server.listen(20)
+    server.listen(25)
     print("Server listening on port 9999")
 
     # Redis 구독을 위한 스레드 시작
