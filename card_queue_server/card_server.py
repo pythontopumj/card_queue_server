@@ -1,4 +1,5 @@
 import socket
+import select
 import threading
 import json
 import redis
@@ -36,14 +37,16 @@ r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': 
 
 # 클라이언트 연결을 저장하는 리스트
 clients = []
-class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소켓 인스턴스 전체 리스트, 각 구독자별 읽지 않은 메세지 저장, 쓰레드lock을 통해 모든 쓰레드에서 동기화
-    socket_instances=[]#소켓 인스턴스들을 저장
+class subs_storage: #클라이언트 구독용 구독소켓 정보, 구독자 소켓 인스턴스 전체 리스트, 각 구독자별 읽지 않은 메세지 저장, 쓰레드lock을 통해 모든 쓰레드에서 동기화
+    socket_instances=[] #소켓 인스턴스들을 저장
+    socket_list=[]
     cs_lock = threading.Lock()
 
     def __init__(self,socket):
         self.islock = threading.Lock()
         self.reset_instance_storage()
         self.add_socket(self)
+        self.add_socket_to_list(socket)
         self.saving_socket(socket)
 
     def saving_socket(self,socket):
@@ -63,11 +66,24 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
     def add_socket(cls, item):
         with cls.cs_lock:  # 클래스 변수 접근 시 락을 사용
             cls.socket_instances.append(item)
+    @classmethod
+    def add_socket_to_list(cls, item):
+        with cls.cs_lock:  # 클래스 변수 접근 시 락을 사용
+            cls.socket_list.append(item)
 
     @classmethod
     def get_socket_list(cls):
         with cls.cs_lock:
             return cls.socket_instances.copy()  # 읽기와 동시에 데이터 경합을 방지하기 위해 복사본 반환
+    @classmethod
+    def get_real_socket_list(cls):
+        with cls.cs_lock:
+            return cls.socket_list.copy()  # 읽기와 동시에 데이터 경합을 방지하기 위해 복사본 반환
+
+    @classmethod
+    def remove_real_socket_list(cls,item):
+        with cls.cs_lock:
+            return cls.socket_list.remove(item) # 읽기와 동시에 데이터 경합을 방지하기 위해 복사본 반환
 
     def reset_instance_storage(self):
         with self.islock:
@@ -84,8 +100,7 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
             return self.subs_store.copy()
 
     @classmethod
-    def remove_instance_by_socket(cls, client_socket):
-        """특정 소켓을 통해 생성된 인스턴스를 찾아 제거합니다."""
+    def remove_instance_by_socket(cls, client_socket):#특정 소켓으로 생성된 인스턴스 제거
         with cls.cs_lock:
             for instance in cls.socket_instances:
                 if instance.socket == client_socket:
@@ -101,6 +116,21 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
                     # 인스턴스 자체 삭제
                     del instance
                     break  # 인스턴스를 찾으면 루프를 종료
+
+    @classmethod
+    def check_sockets(cls, timeout=3):#모든 소켓들을 체크하고 연결이 끊기면 제거
+        sck_list=cls.get_real_socket_list()
+        readable, _, _ = select.select(sck_list, [], [], timeout)
+
+        for sock in readable:
+            data = sock.recv(1024)
+            if data == b'':
+                print(f"Socket {sock} connection closed.")
+                cls.remove_real_socket_list(sock)
+                cls.remove_instance_by_socket(sock)
+                sock.close()
+            else:
+                print(f"Received data: {data.decode('utf-8')}")
 
 
 def subs_store(message):
@@ -176,6 +206,7 @@ def remove_card(card_id, nickname):
         deck.remove(card_id)
         set_deck(deck)
         set_latest_update('remove', card_id, nickname)
+        time.sleep(0.7)
         notify_clients()
 
 def return_card(card_id, nickname):
@@ -184,6 +215,7 @@ def return_card(card_id, nickname):
         deck.append(card_id)
         set_deck(deck)
         set_latest_update('return', card_id, nickname)
+        time.sleep(0.7)
         notify_clients()
 
 def handle_client_request(request,client_socket,client_address):
@@ -214,8 +246,10 @@ def handle_client_request(request,client_socket,client_address):
         address_w[str(client_address)]=nickname
         set_nicknames(registered_list)
         set_address_w_name(address_w)
-
-        making_class=subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind(('0.0.0.0', 9999))
+        dedicated_socket, dedicated_address = server.accept()#두번째 통신선 개설,구독 전달용
+        making_class=subs_storage(dedicated_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
 
     elif action == 'claim_queue':
@@ -272,12 +306,6 @@ def handle_client_connection(client_socket, client_address):
 
     finally:
         # 클라이언트 연결 종료 시 카드 반납 및 상태 초기화
-        def find_gone_user(dict_, target_value):
-            return [key for key, value in dict_.items() if value == target_value]
-        try:
-            subs_storage.remove_instance_by_socket(client_socket)#소켓 연결을 종료 전 메모리 관리를 위해 substore 클래스의 인스턴스 삭제
-        except:
-            print("socket doesnt exist in instance")
         client_socket.close()
         clients.remove(client_socket)
         # 클라이언트가 연결 종료 시 카드 자동 반납
@@ -324,16 +352,17 @@ def start_server():
                 # 메시지 형식을 확인합니다
                 if isinstance(message['data'], bytes):
                     message_str = message['data'].decode('utf-8')
-                    handle_sub_message(message_str)
+                    handle_sub_message(message_str)#모든 전용소켓에 뿌릴 수 있도록 각 클라이언트의 저장소에 메세지 추가
 
     redis_thread = threading.Thread(target=redis_subscriber)
     redis_thread.daemon = True
     redis_thread.start()
 
-    def around_the_user_for_sub():# 구독정보를 처리하기 위한 쓰레드
+    def around_the_user_for_sub():# 구독정보를 보내기 위한 쓰레드
         while True:
             time.sleep(1)
             subs_class=subs_storage
+            subs_class.check_sockets()#소켓이 유효한지 검사 후 소거
             list_for_user=subs_class.get_socket_list()
             for user in list_for_user:
                 socket_for_broad=user.who_i_am()
