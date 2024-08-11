@@ -162,7 +162,7 @@ def return_card(card_id, nickname):
         set_latest_update('return', card_id, nickname)
         notify_clients()
 
-def handle_client_request(request,client_adress,client_socket):
+def handle_client_request(request,client_socket,client_address):
     data = json.loads(request)
     action = data.get('action')
     card_id = data.get('card_id')
@@ -185,7 +185,7 @@ def handle_client_request(request,client_adress,client_socket):
         if len(registered_list) >= 21:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
-        registered_list[nickname] = str(client_adress)
+        registered_list[nickname] = str(client_address)
         set_nicknames(registered_list)
         making_class=subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
@@ -223,7 +223,6 @@ def handle_client_request(request,client_adress,client_socket):
 
 def handle_client_connection(client_socket, client_address):
     """클라이언트와의 연결을 처리합니다."""
-    #각 소켓마다 받아보지 않은 구독정보를 모으는 인스턴스 생성
     try:
         # 클라이언트와 연결이 이루어졌을 때의 처리
         print(f"Accepted connection from {client_address}")
@@ -233,11 +232,11 @@ def handle_client_connection(client_socket, client_address):
 
         # 클라이언트 요청 수신 및 처리
         while True:
-            request = client_socket.recv(4098).decode('utf-8')
+            request = client_socket.recv(4096).decode('utf-8')
             if not request:
                 print("Client disconnected or sent an empty request.")
                 break  # 연결이 끊어졌다면 종료
-            response = handle_client_request(request, client_address)
+            response = handle_client_request(request,client_socket, client_address)
             client_socket.send(response.encode('utf-8'))
 
 
