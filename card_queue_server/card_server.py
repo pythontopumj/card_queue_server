@@ -246,10 +246,7 @@ def handle_client_request(request,client_socket,client_address):
         address_w[str(client_address)]=nickname
         set_nicknames(registered_list)
         set_address_w_name(address_w)
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind(('0.0.0.0', 9999))
-        dedicated_socket, dedicated_address = server.accept()#두번째 통신선 개설,구독 전달용
-        making_class=subs_storage(dedicated_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
+
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
 
     elif action == 'claim_queue':
@@ -292,6 +289,25 @@ def handle_client_connection(client_socket, client_address):
         clients.append(client_socket)
 
         # 클라이언트 요청 수신 및 처리
+
+        while True:#register을 위한 반복문
+            request = client_socket.recv(1024).decode('utf-8')
+            if not request:
+                print("Client disconnected or sent an empty request.")
+                return
+
+            if 'register' in request:
+                response_regi = handle_client_request(request, client_socket, client_address)
+                client_socket.send(response_regi.encode('utf-8'))
+                if 'success' in response_regi:
+                    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    server.bind(('0.0.0.0', 9999))
+                    dedicated_socket, dedicated_address = server.accept()  # 두번째 통신선 개설,구독 전달용
+                    making_class = subs_storage(dedicated_socket)  # register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
+                    break
+            else:
+                response_regi = handle_client_request(request, client_socket, client_address)
+                client_socket.send(response_regi.encode('utf-8'))
         while True:
             request = client_socket.recv(1024).decode('utf-8')
             if not request:
