@@ -289,16 +289,17 @@ def handle_client_connection(client_socket, client_address):
             registered_list.pop(figured_nickname)
             set_nicknames(registered_list)#{닉네임:address},{address:닉네임} 정보 제거
             set_address_w_name(address_with_name)
+            queue = get_queue()
+            if figured_nickname in queue:
+                jangbu = get_jangbu()
+                jangbu.pop(figured_nickname)
+                queue.remove(figured_nickname)
+                return_card(jangbu[figured_nickname], figured_nickname)
+                set_jangbu(jangbu)
+                set_queue(queue)
         except:
             print("key doesnt exist")
-        queue = get_queue()
-        if figured_nickname in queue:
-            jangbu = get_jangbu()
-            jangbu.pop(figured_nickname)
-            queue.remove(figured_nickname)
-            return_card(jangbu[figured_nickname], figured_nickname)
-            set_jangbu(jangbu)
-            set_queue(queue)
+
 
 
 
