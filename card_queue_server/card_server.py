@@ -70,7 +70,7 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
 
     def reset_instance_storage(self):
         with self.islock:
-            self.sub_store=[]
+            self.subs_store=[]
 
     def remove_instance_storage(self, item):
         with self.islock:
