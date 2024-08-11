@@ -4,6 +4,7 @@ import json
 import redis
 import time
 import logging
+import copy
 
 # 로깅 설정
 
