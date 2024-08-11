@@ -250,8 +250,10 @@ def handle_client_connection(client_socket, client_address):
         # 클라이언트 연결 종료 시 카드 반납 및 상태 초기화
         def find_gone_user(dict_, target_value):
             return [key for key, value in dict_.items() if value == target_value]
-
-        subs_storage.remove_instance_by_socket(client_socket)#소켓 연결을 종료 전 메모리 관리를 위해 substore 클래스의 인스턴스 삭제
+        try:
+            subs_storage.remove_instance_by_socket(client_socket)#소켓 연결을 종료 전 메모리 관리를 위해 substore 클래스의 인스턴스 삭제
+        except:
+            print("socket doesnt exist in instance")
         client_socket.close()
         clients.remove(client_socket)
         # 클라이언트가 연결 종료 시 카드 자동 반납
@@ -310,8 +312,7 @@ def start_server():
                     except Exception as e:
                         print(f"Error sending message to client: {e}")
 
-    sending_subs = threading.Thread(target=around_the_user_for_sub())
-    sending_subs.daemon = True
+    sending_subs = threading.Thread(target=around_the_user_for_sub)
     sending_subs.start()
 
 
