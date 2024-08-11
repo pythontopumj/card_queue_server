@@ -209,7 +209,7 @@ def handle_client_request(request,client_socket,client_address):
         if len(registered_list) >= 21:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
-        registered_list[nickname] = client_address
+        registered_list[nickname] = (client_address)
         set_nicknames(registered_list)
         making_class=subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
@@ -279,8 +279,8 @@ def handle_client_connection(client_socket, client_address):
         # 클라이언트가 연결 종료 시 카드 자동 반납
         address_with_name=get_address_w_name()
         registered_list = get_nicknames()
-        figured_nickname = address_with_name[client_address]
-        address_with_name.pop(client_address)
+        figured_nickname = address_with_name[(client_address)]
+        address_with_name.pop((client_address))
         registered_list.pop(figured_nickname)
         set_nicknames(registered_list)#{닉네임:address},{address:닉네임} 정보 제거
         set_address_w_name(address_with_name)
