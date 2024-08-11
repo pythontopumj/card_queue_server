@@ -27,7 +27,7 @@ r = redis.Redis(host=redis_host, port=redis_port)
 
 initial_deck = ["s1", "s2", "s3", "s4", 's5', 's6', 'd7', 's8', 's9', 's10', 'JK']
 r.set('card_deck', json.dumps(initial_deck))#카드를 뽑고 반납하는 카드덱
-r.set('nicknames', json.dumps({{'admin':None}}))#nickname:str(adress)
+r.set('nicknames', json.dumps({'admin':None}))#nickname:str(adress)
 r.set('address_w_name', json.dumps({}))#address:name
 r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
