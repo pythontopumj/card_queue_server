@@ -283,11 +283,14 @@ def handle_client_connection(client_socket, client_address):
         # 클라이언트가 연결 종료 시 카드 자동 반납
         address_with_name=get_address_w_name()
         registered_list = get_nicknames()
-        figured_nickname = address_with_name[str(client_address)]
-        address_with_name.pop(str(client_address))
-        registered_list.pop(figured_nickname)
-        set_nicknames(registered_list)#{닉네임:address},{address:닉네임} 정보 제거
-        set_address_w_name(address_with_name)
+        try:
+            figured_nickname = address_with_name[str(client_address)]
+            address_with_name.pop(str(client_address))
+            registered_list.pop(figured_nickname)
+            set_nicknames(registered_list)#{닉네임:address},{address:닉네임} 정보 제거
+            set_address_w_name(address_with_name)
+        except:
+            print("key doesnt exist")
         queue = get_queue()
         if figured_nickname in queue:
             jangbu = get_jangbu()
