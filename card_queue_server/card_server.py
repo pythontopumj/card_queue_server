@@ -282,9 +282,9 @@ def handle_client_connection(client_socket, client_address):
         figured_nickname = socket_with_name[client_socket]
         registered_list.pop(figured_nickname)
         set_nicknames(registered_list)
+        queue = get_queue()
         if figured_nickname in queue:
             jangbu = get_jangbu()
-            queue = get_queue()
             jangbu.pop(figured_nickname)
             queue.remove(figured_nickname)
             return_card(jangbu[figured_nickname], figured_nickname)
@@ -294,7 +294,6 @@ def handle_client_connection(client_socket, client_address):
 
 
 
-이언트들에게 전파
 
 
 def start_server():
