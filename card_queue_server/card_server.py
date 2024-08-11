@@ -16,8 +16,6 @@ r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
 r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': None}))#가장 최신 정보
 
-pubsub = r.pubsub()
-pubsub.subscribe('status_updates')
 
 # 클라이언트 연결을 저장하는 리스트
 clients = []
