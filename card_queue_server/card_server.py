@@ -7,19 +7,19 @@ import logging
 
 # 로깅 설정
 
-logger = logging.getLogger('test_logger')
-logger.setLevel(logging.DEBUG)
-
-# 파일 핸들러 설정
-file_handler = logging.FileHandler('test_log.log')
-file_handler.setLevel(logging.DEBUG)
-
-# 포맷터 설정
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-
-# 로거에 핸들러 추가
-logger.addHandler(file_handler)
+# logger = logging.getLogger('test_logger')
+# logger.setLevel(logging.DEBUG)
+#
+# # 파일 핸들러 설정
+# file_handler = logging.FileHandler('test_log.log')
+# file_handler.setLevel(logging.DEBUG)
+#
+# # 포맷터 설정
+# formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+# file_handler.setFormatter(formatter)
+#
+# # 로거에 핸들러 추가
+# logger.addHandler(file_handler)
 # Redis 설정
 redis_host = 'redis_server'
 redis_port = 6379
@@ -92,7 +92,7 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
                     try:
                         instance.socket.close()
                     except Exception as e:
-                        logger.info(f"Error closing socket: {e}")
+                        print(f"Error closing socket: {e}")
 
                     # 인스턴스 리스트에서 제거
                     cls.socket_instances.remove(instance)
@@ -104,7 +104,7 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
 
 def subs_store(message):
     """모든 유저의 클래스 subs_storage를 통해 생성된 클라이언트 인스턴스 저장소에 메세지를 추가합니다."""
-    socket_list=subs_storage.get_socket_list
+    socket_list=subs_storage.get_socket_list()
     for client_socket in socket_list:
         client_socket.add_to_instance_storage(message)
 
@@ -112,10 +112,10 @@ def handle_sub_message(message):
     """Redis 메시지를 처리하고 클라이언트에게 전달합니다."""
     if isinstance(message, int):
         # 메시지가 정수인 경우는 처리하지 않거나 로그를 남길 수 있음
-        logger.info(f"Received integer message: {message}")
+        print(f"Received integer message: {message}")
         return
     message_str = message.decode('utf-8')
-    logger.info(f"storing: {message_str}")
+    print(f"storing: {message_str}")
     subs_store(message_str)
 
 def get_jangbu():
@@ -241,7 +241,7 @@ def handle_client_connection(client_socket, client_address):
     """클라이언트와의 연결을 처리합니다."""
     try:
         # 클라이언트와 연결이 이루어졌을 때의 처리
-        logger.info(f"Accepted connection from {client_address}")
+        print(f"Accepted connection from {client_address}")
 
         # 클라이언트 연결 리스트에 추가
         clients.append(client_socket)
@@ -250,14 +250,14 @@ def handle_client_connection(client_socket, client_address):
         while True:
             request = client_socket.recv(1024).decode('utf-8')
             if not request:
-                logger.info("Client disconnected or sent an empty request.")
+                print("Client disconnected or sent an empty request.")
                 break  # 연결이 끊어졌다면 종료
             response = handle_client_request(request,client_socket, client_address)
             client_socket.send(response.encode('utf-8'))
 
 
     except Exception as e:
-        logger.info(f"Error: {e}")
+        print(f"Error: {e}")
 
     finally:
         # 클라이언트 연결 종료 시 카드 반납 및 상태 초기화
@@ -266,7 +266,7 @@ def handle_client_connection(client_socket, client_address):
         try:
             subs_storage.remove_instance_by_socket(client_socket)#소켓 연결을 종료 전 메모리 관리를 위해 substore 클래스의 인스턴스 삭제
         except:
-            logger.info("socket doesnt exist in instance")
+            print("socket doesnt exist in instance")
         client_socket.close()
         clients.remove(client_socket)
         # 클라이언트가 연결 종료 시 카드 자동 반납
@@ -290,11 +290,11 @@ def handle_client_connection(client_socket, client_address):
 
 def start_server():
     """서버를 시작합니다."""
-    logger.info("before start")
+    print("before start")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(('0.0.0.0', 9999))
     server.listen(20)
-    logger.info("Server listening on port 9999")
+    print("Server listening on port 9999")
 
     # Redis 구독을 위한 스레드 시작
     def redis_subscriber():
@@ -325,7 +325,7 @@ def start_server():
                         socket_for_broad.send(messages.encode('utf-8'))
                         user.remove_instance_storage(messages)
                     except Exception as e:
-                        logger.info(f"Error sending message to client: {e}")
+                        print(f"Error sending message to client: {e}")
 
     sending_subs = threading.Thread(target=around_the_user_for_sub)
     sending_subs.start()
