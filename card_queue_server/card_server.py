@@ -7,9 +7,19 @@ import logging
 
 # 로깅 설정
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # 로그 레벨을 DEBUG로 설정
 
+# 파일 핸들러 설정
+file_handler = logging.FileHandler('card_sv.log')
+file_handler.setLevel(logging.DEBUG)  # 파일 핸들러에 대한 로그 레벨 설정
+
+# 포맷터 설정
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+# 로거에 핸들러 추가
+logger.addHandler(file_handler)
 # Redis 설정
 redis_host = 'redis_server'
 redis_port = 6379
