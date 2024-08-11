@@ -28,6 +28,7 @@ r = redis.Redis(host=redis_host, port=redis_port)
 initial_deck = ["s1", "s2", "s3", "s4", 's5', 's6', 'd7', 's8', 's9', 's10', 'JK']
 r.set('card_deck', json.dumps(initial_deck))#카드를 뽑고 반납하는 카드덱
 r.set('nicknames', json.dumps({}))#nickname:str(adress)
+r.set('socket_w_name', json.dumps({}))#nickname:str(adress)
 r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
 r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': None}))#가장 최신 정보
@@ -118,6 +119,13 @@ def handle_sub_message(message):
     print(f"storing: {message_str}")
     subs_store(message_str)
 
+
+def get_socket_w_name():
+    return json.loads(r.get('socket_w_name'))
+
+def set_socket_w_name(socket_w_name):
+    r.set('socket_w_name',json.dumps(socket_w_name))
+
 def get_jangbu():
     return json.loads(r.get('jangbu'))
 def set_jangbu(jangbu):
@@ -201,7 +209,7 @@ def handle_client_request(request,client_socket,client_address):
         if len(registered_list) >= 21:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
-        registered_list[nickname] = str(client_address)
+        registered_list[nickname] = client_socket
         set_nicknames(registered_list)
         making_class=subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
@@ -243,7 +251,7 @@ def handle_client_connection(client_socket, client_address):
         # 클라이언트와 연결이 이루어졌을 때의 처리
 
         # 클라이언트 연결 리스트에 추가
-        #clients.append(client_socket)
+        clients.append(client_socket)
 
         # 클라이언트 요청 수신 및 처리
         while True:
@@ -269,22 +277,24 @@ def handle_client_connection(client_socket, client_address):
         client_socket.close()
         clients.remove(client_socket)
         # 클라이언트가 연결 종료 시 카드 자동 반납
+        socket_with_name=get_socket_w_name()
         registered_list = get_nicknames()
-        jangbu=get_jangbu()
-        queue = get_queue()
-        if str(client_address) in registered_list.values():
-            discon_user_list=find_gone_user(registered_list,str(client_address))
-            for discon_user in discon_user_list:
-                nickname = discon_user
-                registered_list.pop(nickname, None)
-                set_nicknames(registered_list)
-                if nickname in queue:
-                    return_card(jangbu[nickname],nickname)
-                    queue.remove(nickname)
-                    jangbu.pop(nickname)
-                    set_jangbu(jangbu)
-                    set_queue(queue)
-            # 최신화된 상태를 클라이언트들에게 전파
+        figured_nickname = socket_with_name[client_socket]
+        registered_list.pop(figured_nickname)
+        set_nicknames(registered_list)
+        if figured_nickname in queue:
+            jangbu = get_jangbu()
+            queue = get_queue()
+            jangbu.pop(figured_nickname)
+            queue.remove(figured_nickname)
+            return_card(jangbu[figured_nickname], figured_nickname)
+            set_jangbu(jangbu)
+            set_queue(queue)
+
+
+
+
+이언트들에게 전파
 
 
 def start_server():
