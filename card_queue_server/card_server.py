@@ -241,10 +241,9 @@ def handle_client_connection(client_socket, client_address):
     """클라이언트와의 연결을 처리합니다."""
     try:
         # 클라이언트와 연결이 이루어졌을 때의 처리
-        print(f"Accepted connection from {client_address}")
 
         # 클라이언트 연결 리스트에 추가
-        clients.append(client_socket)
+        #clients.append(client_socket)
 
         # 클라이언트 요청 수신 및 처리
         while True:
