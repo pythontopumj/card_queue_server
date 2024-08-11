@@ -4,7 +4,6 @@ import json
 import redis
 import time
 import logging
-import copy
 
 # 로깅 설정
 
@@ -52,7 +51,7 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
 
     def who_i_am(self):
         with self.islock:
-            return self.socket.copy()
+            return self.socket
 
     @classmethod
     def remove_socket(cls, item):
