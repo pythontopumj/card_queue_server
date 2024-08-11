@@ -210,8 +210,8 @@ def handle_client_request(request,client_socket,client_address):
         if len(registered_list) >= 21:
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
-        registered_list[nickname] = (client_address)
-        address_w[(client_address)]=nickname
+        registered_list[nickname] = str(client_address)
+        address_w[str(client_address)]=nickname
         set_nicknames(registered_list)
         set_address_w_name(address_w)
 
@@ -283,8 +283,8 @@ def handle_client_connection(client_socket, client_address):
         # 클라이언트가 연결 종료 시 카드 자동 반납
         address_with_name=get_address_w_name()
         registered_list = get_nicknames()
-        figured_nickname = address_with_name[(client_address)]
-        address_with_name.pop((client_address))
+        figured_nickname = address_with_name[str(client_address)]
+        address_with_name.pop(str(client_address))
         registered_list.pop(figured_nickname)
         set_nicknames(registered_list)#{닉네임:address},{address:닉네임} 정보 제거
         set_address_w_name(address_with_name)
