@@ -2,6 +2,7 @@ import socket
 import threading
 import json
 import redis
+import time
 
 # Redis 설정
 redis_host = 'redis_server'
@@ -10,7 +11,7 @@ r = redis.Redis(host=redis_host, port=redis_port)
 
 initial_deck = ["s1", "s2", "s3", "s4", 's5', 's6', 'd7', 's8', 's9', 's10', 'JK']
 r.set('card_deck', json.dumps(initial_deck))#카드를 뽑고 반납하는 카드덱
-r.set('nicknames', json.dumps({}))#nickname:{adress:socket}
+r.set('nicknames', json.dumps({}))#nickname:str(adress)
 r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
 r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': None}))#가장 최신 정보
@@ -20,25 +21,82 @@ pubsub.subscribe('status_updates')
 
 # 클라이언트 연결을 저장하는 리스트
 clients = []
+class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소켓 인스턴스 전체 리스트, 각 구독자별 읽지 않은 메세지 저장, 쓰레드lock을 통해 모든 쓰레드에서 동기화
+    socket_instances=[]#소켓 인스턴스들을 저장
+    cs_lock = threading.Lock()
 
-def broadcast_message(message):
-    """모든 연결된 클라이언트에게 메시지를 브로드캐스트합니다."""
-    for client_socket in clients:
-        try:
-            client_socket.send(message.encode('utf-8'))
-        except Exception as e:
-            print(f"Error sending message to client: {e}")
-            clients.remove(client_socket)  # 메시지 전송 중 오류가 발생하면 클라이언트를 제거합니다.
+    def __init__(self,socket):
+        self.islock = threading.Lock()
+        self.reset_instance_storage()
+        self.add_socket(self)
+        self.saving_socket(socket)
 
-def handle_message(message):
+    def saving_socket(self,socket):
+        with self.islock:
+            self.socket=socket
+
+    def who_i_am(self):
+        with self.islock:
+            return self.socket.copy()
+
+    def remove_socket(cls, item):
+        with cls.cs_lock:  # 클래스 변수 접근 시 락을 사용
+            cls.socket_instances.remove(item)
+    def add_socket(cls, item):
+        with cls.cs_lock:  # 클래스 변수 접근 시 락을 사용
+            cls.socket_instances.append(item)
+    def get_socket_list(cls):
+        with cls.cs_lock:
+            return cls.socket_instances.copy()  # 읽기와 동시에 데이터 경합을 방지하기 위해 복사본 반환
+
+    def reset_instance_storage(self):
+        with self.islock:
+            self.sub_store=[].copy()
+
+    def remove_instance_storage(self, item):
+        with self.islock:
+            self.subs_store.remove(item)
+    def add_to_instance_storage(self, item):
+        with self.islock:
+            self.subs_store.append(item)
+    def get_instance_storage(self):
+        with self.islock:
+            return self.subs_store.copy()
+
+    def remove_instance_by_socket(cls, socket):
+        """특정 소켓을 통해 생성된 인스턴스를 찾아 제거합니다."""
+        with cls.cs_lock:
+            for instance in cls.socket_instances:
+                if instance.socket == socket:
+                    # 소켓 종료
+                    try:
+                        instance.socket.close()
+                    except Exception as e:
+                        print(f"Error closing socket: {e}")
+
+                    # 인스턴스 리스트에서 제거
+                    cls.socket_instances.remove(instance)
+
+                    # 인스턴스 자체 삭제
+                    del instance
+                    break  # 인스턴스를 찾으면 루프를 종료
+
+
+def subs_store(message):
+    """모든 유저의 클래스 subs_storage를 통해 생성된 클라이언트 인스턴스 저장소에 메세지를 추가합니다."""
+    socket_list=subs_storage.get_socket_list()
+    for client_socket in socket_list:
+        client_socket.add_to_instance_storage(message)
+
+def handle_sub_message(message):
     """Redis 메시지를 처리하고 클라이언트에게 전달합니다."""
     if isinstance(message, int):
         # 메시지가 정수인 경우는 처리하지 않거나 로그를 남길 수 있음
         print(f"Received integer message: {message}")
         return
     message_str = message.decode('utf-8')
-    print(f"Broadcasting message: {message_str}")
-    broadcast_message(message_str)
+    print(f"storing: {message_str}")
+    subs_store(message_str)
 
 def get_jangbu():
     return json.loads(r.get('jangbu'))
@@ -76,6 +134,7 @@ def notify_clients():
     top_queue = queue[:3]
 
     message = {
+        'status':"publish",
         'card_deck': len(deck),
         'top_queue': top_queue,
         'latest_update': latest_update
@@ -99,7 +158,7 @@ def return_card(card_id, nickname):
         set_latest_update('return', card_id, nickname)
         notify_clients()
 
-def handle_client_request(request,client_adress):
+def handle_client_request(request,client_adress,client_socket):
     data = json.loads(request)
     action = data.get('action')
     card_id = data.get('card_id')
@@ -124,7 +183,7 @@ def handle_client_request(request,client_adress):
 
         registered_list[nickname] = str(client_adress)
         set_nicknames(registered_list)
-
+        subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
 
     elif action == 'claim_queue':
@@ -160,6 +219,7 @@ def handle_client_request(request,client_adress):
 
 def handle_client_connection(client_socket, client_address):
     """클라이언트와의 연결을 처리합니다."""
+    #각 소켓마다 받아보지 않은 구독정보를 모으는 인스턴스 생성
     try:
         # 클라이언트와 연결이 이루어졌을 때의 처리
         print(f"Accepted connection from {client_address}")
@@ -171,9 +231,11 @@ def handle_client_connection(client_socket, client_address):
         while True:
             request = client_socket.recv(1024).decode('utf-8')
             if not request:
+                print("Client disconnected or sent an empty request.")
                 break  # 연결이 끊어졌다면 종료
             response = handle_client_request(request, client_address)
             client_socket.send(response.encode('utf-8'))
+
 
     except Exception as e:
         print(f"Error: {e}")
@@ -182,6 +244,8 @@ def handle_client_connection(client_socket, client_address):
         # 클라이언트 연결 종료 시 카드 반납 및 상태 초기화
         def find_gone_user(dict_, target_value):
             return [key for key, value in dict_.items() if value == target_value]
+
+        subs_storage.remove_instance_by_socket(client_socket)#소켓 연결을 종료 전 메모리 관리를 위해 substore 클래스의 인스턴스 삭제
         client_socket.close()
         clients.remove(client_socket)
         # 클라이언트가 연결 종료 시 카드 자동 반납
@@ -212,7 +276,6 @@ def start_server():
 
     # Redis 구독을 위한 스레드 시작
     def redis_subscriber():
-        r = redis.Redis(host='redis_server', port=6379)
         pubsub = r.pubsub()
         pubsub.subscribe('status_updates')
 
@@ -221,16 +284,38 @@ def start_server():
                 # 메시지 형식을 확인합니다
                 if isinstance(message['data'], bytes):
                     message_str = message['data'].decode('utf-8')
-                    handle_message(message_str)
+                    handle_sub_message(message_str)
 
     redis_thread = threading.Thread(target=redis_subscriber)
     redis_thread.daemon = True
     redis_thread.start()
 
+    def around_the_user_for_sub():# 구독정보를 처리하기 위한 쓰레드
+        while True:
+            time.sleep(1)
+            list_for_user=subs_storage.get_socket_list()
+            for user in list_for_user:
+                socket_for_broad=user.who_i_am()
+                sub_list=user.get_instance_storage()
+                for messages in sub_list:
+                    try:
+                        socket_for_broad.send(messages.encode('utf-8'))
+                        user.remove_instance_strage(messages)
+                    except Exception as e:
+                        print(f"Error sending message to client: {e}")
+
+    sending_subs = threading.Thread(target=around_the_user_for_sub)
+    sending_subs.daemon = True
+    sending_subs.start()
+
+
     while True:
         client_socket, client_address = server.accept()
         client_handler = threading.Thread(target=handle_client_connection, args=(client_socket, client_address))
         client_handler.start()
+
+
+
 
 if __name__ == '__main__':
     start_server()
