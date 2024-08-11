@@ -293,7 +293,7 @@ def start_server():
     def around_the_user_for_sub():# 구독정보를 처리하기 위한 쓰레드
         while True:
             time.sleep(1)
-            list_for_user=subs_storage.get_socket_list()
+            list_for_user=subs_storage.get_socket_list
             for user in list_for_user:
                 socket_for_broad=user.who_i_am()
                 sub_list=user.get_instance_storage()
@@ -304,7 +304,7 @@ def start_server():
                     except Exception as e:
                         print(f"Error sending message to client: {e}")
 
-    sending_subs = threading.Thread(target=around_the_user_for_sub)
+    sending_subs = threading.Thread(target=around_the_user_for_sub())
     sending_subs.daemon = True
     sending_subs.start()
 
