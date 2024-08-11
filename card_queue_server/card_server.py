@@ -3,7 +3,7 @@ import threading
 import json
 import redis
 import time
-import logging
+#import logging
 
 # 로깅 설정
 
@@ -192,6 +192,7 @@ def handle_client_request(request,client_socket,client_address):
     card_id = data.get('card_id')
     nickname = data.get('nickname')
     registered_list = get_nicknames()
+    address_w=get_address_w_name()
     queue = get_queue()
     jangbu=get_jangbu()
 
@@ -210,7 +211,10 @@ def handle_client_request(request,client_socket,client_address):
             return json.dumps({'status': 'error', 'message': '접속중 너무 많은 사용자'})
 
         registered_list[nickname] = (client_address)
+        address_w[(client_address)]=nickname
         set_nicknames(registered_list)
+        set_address_w_name(address_w)
+
         making_class=subs_storage(client_socket)#register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
         return json.dumps({'status': 'success', 'message': '등록 성공적인'})
 
