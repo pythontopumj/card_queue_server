@@ -39,12 +39,17 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
         with self.islock:
             return self.socket.copy()
 
+    @classmethod
     def remove_socket(cls, item):
         with cls.cs_lock:  # 클래스 변수 접근 시 락을 사용
             cls.socket_instances.remove(item)
+
+    @classmethod
     def add_socket(cls, item):
         with cls.cs_lock:  # 클래스 변수 접근 시 락을 사용
             cls.socket_instances.append(item)
+
+    @classmethod
     def get_socket_list(cls):
         with cls.cs_lock:
             return cls.socket_instances.copy()  # 읽기와 동시에 데이터 경합을 방지하기 위해 복사본 반환
@@ -63,6 +68,7 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
         with self.islock:
             return self.subs_store.copy()
 
+    @classmethod
     def remove_instance_by_socket(cls, client_socket):
         """특정 소켓을 통해 생성된 인스턴스를 찾아 제거합니다."""
         with cls.cs_lock:
