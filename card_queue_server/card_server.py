@@ -28,7 +28,7 @@ r = redis.Redis(host=redis_host, port=redis_port)
 initial_deck = ["s1", "s2", "s3", "s4", 's5', 's6', 'd7', 's8', 's9', 's10', 'JK']
 r.set('card_deck', json.dumps(initial_deck))#카드를 뽑고 반납하는 카드덱
 r.set('nicknames', json.dumps({}))#nickname:str(adress)
-r.set('address_w_name', json.dumps({}))#nickname:str(adress)
+r.set('address_w_name', json.dumps({}))#address:name
 r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
 r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': None}))#가장 최신 정보
@@ -121,10 +121,10 @@ def handle_sub_message(message):
 
 
 def get_address_w_name():
-    return json.loads(r.get('socket_w_name'))
+    return json.loads(r.get('address_w_name'))
 
-def set_address_w_name(socket_w_name):
-    r.set('socket_w_name',json.dumps(socket_w_name))
+def set_address_w_name(address_w_name):
+    r.set('address_w_name',json.dumps(address_w_name))
 
 def get_jangbu():
     return json.loads(r.get('jangbu'))
