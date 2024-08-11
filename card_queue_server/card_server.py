@@ -84,7 +84,7 @@ class subs_storage:#클라이언트 구독용 구독소켓 정보, 구독자 소
 
 def subs_store(message):
     """모든 유저의 클래스 subs_storage를 통해 생성된 클라이언트 인스턴스 저장소에 메세지를 추가합니다."""
-    socket_list=subs_storage.get_socket_list()
+    socket_list=subs_storage.get_socket_list
     for client_socket in socket_list:
         client_socket.add_to_instance_storage(message)
 
@@ -293,14 +293,14 @@ def start_server():
     def around_the_user_for_sub():# 구독정보를 처리하기 위한 쓰레드
         while True:
             time.sleep(1)
-            list_for_user=subs_storage.get_socket_list()
+            list_for_user=subs_storage.get_socket_list
             for user in list_for_user:
                 socket_for_broad=user.who_i_am()
                 sub_list=user.get_instance_storage()
                 for messages in sub_list:
                     try:
                         socket_for_broad.send(messages.encode('utf-8'))
-                        user.remove_instance_strage(messages)
+                        user.remove_instance_storage(messages)
                     except Exception as e:
                         print(f"Error sending message to client: {e}")
 
