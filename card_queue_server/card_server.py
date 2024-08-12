@@ -304,6 +304,7 @@ def handle_client_connection(client_socket, client_address):
                     server.bind(('0.0.0.0', 9999))
                     dedicated_socket, dedicated_address = server.accept()  # 두번째 통신선 개설,구독 전달용
                     making_class = subs_storage(dedicated_socket)  # register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
+                    dedicated_socket.send("check hotline".encode('utf-8'))
                     break
             else:
                 response_regi = handle_client_request(request, client_socket, client_address)
