@@ -374,7 +374,7 @@ def start_server():
 
     def around_the_user_for_sub():# 구독정보를 보내기 위한 쓰레드
         while True:
-            time.sleep(5)
+            time.sleep(2)
             subs_class=subs_storage
             subs_class.check_sockets()#소켓이 유효한지 검사 후 소거
             list_for_user=subs_class.get_socket_list()
