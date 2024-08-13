@@ -36,6 +36,7 @@ r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': 
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(('0.0.0.0', 9999))
+server.listen(50)
 # 클라이언트 연결을 저장하는 리스트
 clients = []
 class subs_storage: #클라이언트 구독용 구독소켓 정보, 구독자 소켓 인스턴스 전체 리스트, 각 구독자별 읽지 않은 메세지 저장, 쓰레드lock을 통해 모든 쓰레드에서 동기화
@@ -301,7 +302,6 @@ def handle_client_connection(client_socket, client_address):
                 response_regi = handle_client_request(request, client_socket, client_address)
                 client_socket.send(response_regi.encode('utf-8'))
                 if 'success' in response_regi:
-                    clients.append(client_socket)
                     dedicated_socket, dedicated_address = server.accept()  # 두번째 통신선 개설,구독 전달용
                     making_class = subs_storage(dedicated_socket)  # register에 성공하면 구독 클래스에 해당 소켓 인스턴스 생성, 등록에 성공한 유저에게만 구독정보를 발송
                     time.sleep(1)
@@ -326,7 +326,6 @@ def handle_client_connection(client_socket, client_address):
     finally:
         # 클라이언트 연결 종료 시 카드 반납 및 상태 초기화
         client_socket.close()
-        clients.remove(client_socket)
         # 클라이언트가 연결 종료 시 카드 자동 반납
         address_with_name=get_address_w_name()
         registered_list = get_nicknames()
@@ -357,7 +356,7 @@ def start_server():
     """서버를 시작합니다."""
     print("before start")
 
-    server.listen(50)
+
     print("Server listening on port 9999")
 
     # Redis 구독을 위한 스레드 시작
