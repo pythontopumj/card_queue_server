@@ -34,7 +34,8 @@ r.set('queue', json.dumps([]))#[nickname]
 r.set('jangbu', json.dumps({}))#{nickname:card} 보통은 큐를 사용하고 특수한 경우를 위해 큐 추적을 위해 신설
 r.set('latest_update', json.dumps({'action': None, 'card_id': None, 'nickname': None}))#가장 최신 정보
 
-
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(('0.0.0.0', 9999))
 # 클라이언트 연결을 저장하는 리스트
 clients = []
 class subs_storage: #클라이언트 구독용 구독소켓 정보, 구독자 소켓 인스턴스 전체 리스트, 각 구독자별 읽지 않은 메세지 저장, 쓰레드lock을 통해 모든 쓰레드에서 동기화
@@ -355,8 +356,7 @@ def handle_client_connection(client_socket, client_address):
 def start_server():
     """서버를 시작합니다."""
     print("before start")
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('0.0.0.0', 9999))
+
     server.listen(50)
     print("Server listening on port 9999")
 
